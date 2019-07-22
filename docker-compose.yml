@@ -1,24 +1,32 @@
-version: '2'
+version: '3'
 
 services:
 
   elasticsearch:
+    container_name: elasticsearch
+    hostname: elasticsearch
+#    domainname: teko.vn
     build:
       context: elasticsearch/
       args:
         ELK_VERSION: $ELK_VERSION
     volumes:
       - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+      - elasticsearch720-data:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
       - "9300:9300"
     environment:
       ES_JAVA_OPTS: "-Xmx256m -Xms256m"
       ELASTIC_PASSWORD: changeme
-    networks:
-      - elk
+    network_mode: bridge
+#    networks:
+#      - elk
 
   logstash:
+    container_name: logstash
+    hostname: logstash
+#    domainname: teko.vn
     build:
       context: logstash/
       args:
@@ -31,26 +39,43 @@ services:
       - "9600:9600"
     environment:
       LS_JAVA_OPTS: "-Xmx256m -Xms256m"
-    networks:
-      - elk
+#    external_links:
+#      - elasticsearch
+    network_mode: bridge
+#    networks:
+#      - elk
     depends_on:
       - elasticsearch
 
   kibana:
+    container_name: kibana
+    hostname: kibana
+#    domainname: teko.vn
     build:
       context: kibana/
       args:
         ELK_VERSION: $ELK_VERSION
     volumes:
       - ./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
+#    external_links:
+#      - elasticsearch
     ports:
       - "5601:5601"
-    networks:
-      - elk
+    network_mode: bridge
+#    networks:
+#      - elk
     depends_on:
       - elasticsearch
 
-networks:
+volumes:
+  elasticsearch720-data:
+    external: true
+#    driver: local
+#    driver_opts:
+#      type: "none"
+#      o: "bind"
+#      device: "/d/projects/data_server/elasticsearch/data/7.2.0/"
 
-  elk:
-    driver: bridge
+#networks:
+#  elk:
+#    driver: bridge
