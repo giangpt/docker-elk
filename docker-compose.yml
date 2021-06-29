@@ -1,81 +1,77 @@
-version: '3'
+version: '3.2'
 
 services:
-
   elasticsearch:
-    container_name: elasticsearch
-    hostname: elasticsearch
-#    domainname: teko.vn
     build:
       context: elasticsearch/
       args:
         ELK_VERSION: $ELK_VERSION
     volumes:
-      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
-      - elasticsearch720-data:/usr/share/elasticsearch/data
+      - type: bind
+        source: ./elasticsearch/config/elasticsearch.yml
+        target: /usr/share/elasticsearch/config/elasticsearch.yml
+        read_only: true
+      - type: volume
+        source: elasticsearch
+        target: /usr/share/elasticsearch/data
     ports:
       - "9200:9200"
       - "9300:9300"
     environment:
       ES_JAVA_OPTS: "-Xmx256m -Xms256m"
       ELASTIC_PASSWORD: changeme
-    network_mode: bridge
-#    networks:
-#      - elk
+      # Use single node discovery in order to disable production mode and avoid bootstrap checks.
+      # see: https://www.elastic.co/guide/en/elasticsearch/reference/current/bootstrap-checks.html
+      discovery.type: single-node
+    networks:
+      - elk
 
   logstash:
-    container_name: logstash
-    hostname: logstash
-#    domainname: teko.vn
     build:
       context: logstash/
       args:
         ELK_VERSION: $ELK_VERSION
     volumes:
-      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
-      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - type: bind
+        source: ./logstash/config/logstash.yml
+        target: /usr/share/logstash/config/logstash.yml
+        read_only: true
+      - type: bind
+        source: ./logstash/pipeline
+        target: /usr/share/logstash/pipeline
+        read_only: true
     ports:
-      - "5000:5000"
+      - "5044:5044"
+      - "5000:5000/tcp"
+      - "5000:5000/udp"
       - "9600:9600"
     environment:
       LS_JAVA_OPTS: "-Xmx256m -Xms256m"
-#    external_links:
-#      - elasticsearch
-    network_mode: bridge
-#    networks:
-#      - elk
+    networks:
+      - elk
     depends_on:
       - elasticsearch
 
   kibana:
-    container_name: kibana
-    hostname: kibana
-#    domainname: teko.vn
     build:
       context: kibana/
       args:
         ELK_VERSION: $ELK_VERSION
     volumes:
-      - ./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
-#    external_links:
-#      - elasticsearch
+      - type: bind
+        source: ./kibana/config/kibana.yml
+        target: /usr/share/kibana/config/kibana.yml
+        read_only: true
     ports:
       - "5601:5601"
-    network_mode: bridge
-#    networks:
-#      - elk
+    networks:
+      - elk
     depends_on:
       - elasticsearch
 
-volumes:
-  elasticsearch720-data:
-    external: true
-#    driver: local
-#    driver_opts:
-#      type: "none"
-#      o: "bind"
-#      device: "/d/projects/data_server/elasticsearch/data/7.2.0/"
+networks:
+  elk:
+    driver: bridge
 
-#networks:
-#  elk:
-#    driver: bridge
+volumes:
+  elasticsearch:
